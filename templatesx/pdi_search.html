@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}ค้นหา - PDI{% endblock %}
+
+{% block content %}
+<style>
+    #search-results { list-style: none; padding: 0; margin-top: 5px; border: 1px solid #eee; background: white; position: absolute; width: 300px; z-index: 100; }
+    #search-results li { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+    #search-results li:hover { background: #f1f1f1; }
+</style>
+
+<div class="card">
+    <h3>ค้นหารถ (VIN / ID VAN)</h3>
+    <div style="position: relative;">
+        <input type="text" id="search-input" placeholder="พิมพ์เลข VIN หรือ ID VAN..." autocomplete="off">
+        <ul id="search-results"></ul>
+    </div>
+</div>
+
+<script>
+    const input = document.getElementById('search-input');
+    const results = document.getElementById('search-results');
+    let timeout = null;
+
+    input.addEventListener('input', (e) => {
+        clearTimeout(timeout);
+        const q = e.target.value.trim();
+        if (q.length < 3) { results.innerHTML = ''; return; }
+        
+        timeout = setTimeout(() => {
+            fetch(`/api/search?q=${q}`)
+                .then(res => res.json())
+                .then(data => {
+                    results.innerHTML = '';
+                    data.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = `${item.vin_no} (${item.model || '-'})`;
+                        li.onclick = () => window.location.href = `/pdi/${item.vin_no}`;
+                        results.appendChild(li);
+                    });
+                });
+        }, 300);
+    });
+</script>
+{% endblock %}

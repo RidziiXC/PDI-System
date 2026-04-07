@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตั้งค่าตำแหน่ง PDF (Drag & Drop)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 300px; background: #f4f4f4; border-right: 1px solid #ddd; padding: 20px; overflow-y: auto; box-sizing: border-box; }
+        .sidebar h3 { margin-top: 0; }
+        .field-item { background: white; border: 1px solid #ccc; padding: 8px; margin-bottom: 8px; border-radius: 4px; cursor: grab; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .editor-area { flex: 1; background: #555; position: relative; overflow: auto; display: flex; justify-content: center; padding: 20px; }
+        #canvas-wrapper { position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.5); background: white; }
+        canvas { display: block; }
+        .drag-point { position: absolute; background: rgba(255, 255, 0, 0.4); border: 1px solid red; padding: 2px 5px; cursor: move; font-size: 12px; color: black; white-space: nowrap; transform: translate(0, -100%); }
+        .drag-point.selected { background: rgba(0, 255, 0, 0.6); border: 2px solid blue; z-index: 10; }
+        .prop-panel { position: absolute; bottom: 20px; right: 20px; width: 250px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.2); display: none; z-index: 100; }
+        .prop-row { margin-bottom: 10px; }
+        .prop-row label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+        .prop-row input { width: 100%; padding: 5px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
+        .btn { width: 100%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        .btn-save { background: #28a745; color: white; }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <h3>1. เลือกไฟล์ PDF</h3>
+    <select id="pdfSelect" style="width:100%; padding:8px; margin-bottom:20px;"><option value="">-- เลือก Template --</option></select>
+    <h3>2. รายการข้อมูล</h3>
+    <div id="fieldsList"></div>
+    <div style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 20px;">
+        <label>Key Name:</label>
+        <input type="text" id="configKey" style="width:100%; padding:5px; margin-top:5px;" readonly>
+        <button class="btn btn-save" onclick="saveConfiguration()">บันทึกการตั้งค่า (Save)</button>
+        <br><br><a href="/" style="text-decoration:none; color:#007bff;">&larr; กลับหน้าหลัก</a>
+    </div>
+</div>
+<div class="editor-area"><div id="canvas-wrapper"><canvas id="the-canvas"></canvas><div id="overlay-layer"></div></div></div>
+<div class="prop-panel" id="propPanel">
+    <h4 id="propName" style="margin-top:0;"></h4>
+    <div class="prop-row"><label>Font Size:</label><input type="number" id="propSize" value="10"></div>
+    <div class="prop-row"><label>Color:</label><input type="color" id="propColor"></div>
+    <button class="btn" style="background:#dc3545; color:white;" onclick="removeSelectedPoint()">ลบรายการนี้</button>
+</div>
+<script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const AVAILABLE_FIELDS = [
+        { id: 'vin', label: 'VIN No.' },
+        { id: 'vin_2', label: 'VIN No. (จุดที่ 2)' },
+        { id: 'check_date', label: 'วันที่ตรวจสอบ' },
+        { id: 'report_date_2', label: 'วันที่ Report (จุดที่ 2)' },
+        { id: 'delivery_date_plus_1', label: 'วันที่ส่งมอบ (+1 วัน)' },
+        { id: 'ad_date_plus_1', label: 'วันที่ AD (+1 วัน)' },
+        { id: 'phone_locked', label: 'เบอร์โทร (Locked)' },
+        { id: 'voltage', label: 'Voltage' },
+        { id: 'soh', label: 'SOH' },
+        { id: 'soc', label: 'SOC' },
+        { id: 'cca', label: 'CCA' }
+    ];
+    let pdfDoc = null, pdfScale = 1.5, currentKey = "default", activePoints = {}, selectedFieldId = null, pdfPageHeight = 0;
+    document.addEventListener('DOMContentLoaded', () => {
+        loadPdfList();
+        renderFieldsSidebar();
+        const wrapper = document.getElementById('canvas-wrapper');
+        wrapper.addEventListener('dragover', (e) => e.preventDefault());
+        wrapper.addEventListener('drop', handleDrop);
+        document.getElementById('propSize').addEventListener('input', updateSelectedProp);
+        document.getElementById('propColor').addEventListener('input', updateSelectedProp);
+    });
+    function loadPdfList() {
+        fetch('/api/pdf/list').then(r => r.json()).then(files => {
+            const sel = document.getElementById('pdfSelect');
+            files.forEach(f => { const opt = document.createElement('option'); opt.value = f; opt.textContent = f; sel.appendChild(opt); });
+            sel.addEventListener('change', (e) => loadPdf(e.target.value));
+        });
+    }
+    function renderFieldsSidebar() {
+        const container = document.getElementById('fieldsList');
+        AVAILABLE_FIELDS.forEach(f => {
+            const div = document.createElement('div');
+            div.className = 'field-item'; div.draggable = true; div.textContent = f.label; div.dataset.id = f.id;
+            div.addEventListener('dragstart', (e) => { e.dataTransfer.setData('field_id', f.id); });
+            container.appendChild(div);
+        });
+    }
+    async function loadPdf(filename) {
+        if (!filename) return;
+        const url = `/api/pdf/file/${filename}`;
+        pdfDoc = await pdfjsLib.getDocument(url).promise;
+        const page = await pdfDoc.getPage(1);
+        const viewport = page.getViewport({ scale: pdfScale });
+        pdfPageHeight = page.getViewport({ scale: 1.0 }).height;
+        const canvas = document.getElementById('the-canvas');
+        canvas.height = viewport.height; canvas.width = viewport.width;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+        loadConfigForFile(filename);
+    }
+    function loadConfigForFile(filename) {
+        fetch(`/api/pdf/coords/${filename}`).then(r => r.json()).then(res => {
+            currentKey = res.key; document.getElementById('configKey').value = currentKey;
+            document.getElementById('overlay-layer').innerHTML = ''; activePoints = {};
+            Object.entries(res.data).forEach(([fid, val]) => {
+                createPointElement(fid, val.x * pdfScale, (pdfPageHeight - val.y) * pdfScale, val.size, val.color);
+            });
+        });
+    }
+    function handleDrop(e) {
+        e.preventDefault();
+        const fid = e.dataTransfer.getData('field_id'); if (!fid) return;
+        const rect = document.getElementById('canvas-wrapper').getBoundingClientRect();
+        createPointElement(fid, e.clientX - rect.left, e.clientY - rect.top, 10, "#000000");
+        selectPoint(fid);
+    }
+    function createPointElement(fid, x, y, size, color) {
+        if (activePoints[fid]) activePoints[fid].element.remove();
+        const label = AVAILABLE_FIELDS.find(f => f.id === fid)?.label || fid;
+        const el = document.createElement('div');
+        el.className = 'drag-point'; el.textContent = label; el.style.left = x + 'px'; el.style.top = y + 'px';
+        el.style.fontSize = (size * pdfScale) + 'px'; el.style.color = color;
+        let isDragging = false;
+        el.addEventListener('mousedown', (e) => { isDragging = true; selectPoint(fid); e.stopPropagation(); });
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const rect = document.getElementById('canvas-wrapper').getBoundingClientRect();
+            el.style.left = (e.clientX - rect.left) + 'px'; el.style.top = (e.clientY - rect.top) + 'px';
+            activePoints[fid].x = e.clientX - rect.left; activePoints[fid].y = e.clientY - rect.top;
+        });
+        window.addEventListener('mouseup', () => isDragging = false);
+        document.getElementById('overlay-layer').appendChild(el);
+        activePoints[fid] = { x, y, size, color, element: el };
+    }
+    function selectPoint(fid) {
+        selectedFieldId = fid; const data = activePoints[fid];
+        document.querySelectorAll('.drag-point').forEach(d => d.classList.remove('selected'));
+        data.element.classList.add('selected');
+        document.getElementById('propPanel').style.display = 'block';
+        document.getElementById('propName').textContent = AVAILABLE_FIELDS.find(f => f.id === fid)?.label;
+        document.getElementById('propSize').value = data.size; document.getElementById('propColor').value = data.color;
+    }
+    function updateSelectedProp() {
+        if (!selectedFieldId) return;
+        const pt = activePoints[selectedFieldId];
+        pt.size = document.getElementById('propSize').value; pt.color = document.getElementById('propColor').value;
+        pt.element.style.fontSize = (pt.size * pdfScale) + 'px'; pt.element.style.color = pt.color;
+    }
+    function removeSelectedPoint() {
+        if (selectedFieldId) { activePoints[selectedFieldId].element.remove(); delete activePoints[selectedFieldId]; document.getElementById('propPanel').style.display = 'none'; }
+    }
+    function saveConfiguration() {
+        const coords = {};
+        Object.entries(activePoints).forEach(([fid, v]) => {
+            coords[fid] = { x: Math.round(v.x / pdfScale), y: Math.round(pdfPageHeight - (v.y / pdfScale)), size: v.size, color: v.color };
+        });
+        fetch('/api/pdf/save_coords', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ key: currentKey, coords: coords }) })
+        .then(r => r.json()).then(res => alert(res.ok ? 'บันทึกแล้ว' : 'ผิดพลาด'));
+    }
+</script>
+</body>
+</html>

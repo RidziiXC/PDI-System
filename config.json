@@ -1,0 +1,35 @@
+{
+  "db_path": "stock.db",
+  "pdi_db": "stock.db",
+  "stockout_db_path": "stockout.db",
+  "attachments_root": "/opt/stock_monitor/Stock",
+  "export_upload_dir": "uploads_export",
+  "telegram_bot_token": "API boot ",
+  "credentials_path": "credentials.json",
+  "google_sheet_url": " my sheetlink google_sheet_url ",
+  "worksheet_name": "StockIN",
+  "poll_interval_minutes": 3,
+  "notify_chat_id": "",
+
+  "pdi_web": {
+    "host": "0.0.0.0",
+    "port": 9000,
+    "workers": 1,
+    "reload": false
+  },
+  "inventory_web": {
+    "host": "0.0.0.0",
+    "port": 9111
+  },
+  "stockout_web": {
+    "host": "0.0.0.0",
+    "port": 9112,
+    "workers": 1,
+    "reload": false
+  },
+  "longterm_web": {
+    "host": "0.0.0.0",
+    "port": 9119,
+    "reload": false
+  }
+}

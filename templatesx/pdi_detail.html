@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}PDI Detail - {{ vin }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>ข้อมูลรถ: {{ vin }}</h2>
+    <p><strong>Model:</strong> {{ veh.model or '-' }}</p>
+    <p><strong>ID VAN:</strong> {{ veh.id_van or '-' }}</p>
+</div>
+
+<div class="card" style="background: #f9f9f9; border: 1px solid #ddd;">
+    <h3>📋 2. รายการข้อมูล (Data List)</h3>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; font-size: 14px;">
+        <div>วันที่ตรวจสอบ (Report Time):</div>
+        <div style="color: blue;"><strong>{{ vdci.after_report_time if vdci else 'N/A' }}</strong></div>
+
+        <div>วันที่ส่งมอบรถ (+1 วัน):</div>
+        <div style="color: #0b7a29;"><span id="disp_delivery_plus_1">-</span></div>
+        
+        <div>วันที่ปัจจุบัน/AD (+1 วัน):</div>
+        <div style="color: #0b7a29;"><span id="disp_ad_plus_1">-</span></div>
+        
+        <div>เบอร์โทรติดต่อ (Locked):</div>
+        <div><strong style="color: blue;">020177756</strong></div>
+        
+        <div>VIN (จุดที่ 1 และ 2):</div>
+        <div>{{ vin }}</div>
+    </div>
+</div>
+
+<div class="card" style="background: #e3f2fd; border: 1px solid #90caf9;">
+    <h3>📄 สร้างเอกสารเคลม (Claim Document)</h3>
+    <div style="margin-bottom: 15px;">
+        <label><strong>เลือก Template:</strong></label>
+        <select id="templateSelect" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc; width: 100%; max-width: 400px;" onchange="updatePdfLink()">
+            {% for t in all_templates %}
+                <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <a id="btnDownloadPdf" href="#" target="_blank" class="btn" style="background: #007bff; display: inline-block;">
+        🖨️ ดาวน์โหลด PDF (รวม PDPA 1-2)
+    </a>
+</div>
+
+<div class="card">
+    <h3>ข้อมูล VDCI (Last Import)</h3>
+    {% if vdci %}
+    <div style="background: #eef; padding: 10px; border-radius: 4px;">
+        <p><strong>Last Import:</strong> {{ vdci.created_at }}</p>
+        <p><strong>Report Time:</strong> {{ vdci.after_report_time }}</p>
+        <a href="/uploads_damage/{{ vdci.after_file_path }}" target="_blank" class="btn" style="font-size: 12px;">ดูไฟล์ Report</a>
+    </div>
+    {% else %}
+    <p class="text-muted">ไม่มีข้อมูล VDCI</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>ใบเช็คแบตเตอรี่ (Battery Check Sheet)</h3>
+    <div style="text-align: center; padding: 20px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; margin-bottom: 20px;">
+        <button onclick="openBatteryPopup()" class="btn" style="font-size: 16px; padding: 10px 20px;">
+            📷 บันทึกข้อมูลแบตเตอรี่ (New)
+        </button>
+    </div>
+    {% if batt %}
+    <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px;">
+        <h4>ข้อมูลล่าสุด:</h4>
+        <ul>
+            <li><strong>Voltage:</strong> {{ batt.voltage }}</li>
+            <li><strong>Health:</strong> {{ batt.battery_health }}</li>
+            <li><strong>SoC:</strong> {{ batt.charge_status }}</li>
+            <li><strong>CCA:</strong> {{ batt.cca_value }}</li>
+            {% if batt.image_path %}
+            <li><a href="/{{ batt.image_path }}" target="_blank">ดูรูปภาพประกอบ</a></li>
+            {% endif %}
+        </ul>
+        <div style="margin-top: 10px;">
+            <button onclick="openBatteryPopup({{ batt.id }})" class="btn" style="background: #ffc107; color: #000;">✏️ แก้ไข</button>
+            <button onclick="deleteBattery({{ batt.id }})" class="btn" style="background: #dc3545;">🗑️ ลบ</button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function updatePdfLink() {
+        const vin = "{{ vin }}";
+        const select = document.getElementById('templateSelect');
+        const selectedTemplate = select.value;
+        const btn = document.getElementById('btnDownloadPdf');
+        if (selectedTemplate) {
+            btn.href = `/api/gen_pdf/${vin}?template_name=${encodeURIComponent(selectedTemplate)}`;
+        }
+    }
+
+    function openBatteryPopup(id = null) {
+        const w = 500, h = 800;
+        const left = (screen.width/2)-(w/2), top = (screen.height/2)-(h/2);
+        let url = '/pdi/{{ vin }}/battery_popup';
+        if (id) url += '?id=' + id;
+        window.open(url, 'BatteryCheckWindow', `width=${w},height=${h},top=${top},left=${left},scrollbars=yes`);
+    }
+
+    function deleteBattery(id) {
+        if (!confirm('ยืนยันการลบข้อมูล?')) return;
+        const formData = new FormData();
+        formData.append('id', id);
+        fetch('/api/delete_battery', { method: 'POST', body: formData })
+        .then(res => res.json()).then(data => {
+            if (data.ok) window.location.reload();
+        });
+    }
+
+    (function() {
+        let baseDate = new Date();
+        {% if vdci and vdci.after_report_time %}
+            const raw = "{{ vdci.after_report_time }}";
+            const datePart = raw.split(' ')[0].replace(/\./g, '-');
+            const d = new Date(datePart);
+            if (!isNaN(d.getTime())) {
+                baseDate = d;
+            }
+        {% endif %}
+        const plus1 = new Date(baseDate);
+        plus1.setDate(plus1.getDate() + 1);
+        const nextStr = plus1.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        document.getElementById('disp_ad_plus_1').innerText = nextStr;
+        document.getElementById('disp_delivery_plus_1').innerText = nextStr;
+        updatePdfLink();
+    })();
+</script>
+{% endblock %}

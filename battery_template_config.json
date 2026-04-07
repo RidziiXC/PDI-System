@@ -1,0 +1,14 @@
+{
+    "m_left": "7",
+    "label_w": "37.5",
+    "l_height": "6.5",
+    "f_body": "10",
+    "txt_soc": "SOC:",
+    "txt_vol": "VOLTAGE:",
+    "txt_soh": "SOH:",
+    "txt_mea": "MEASURED:",
+    "txt_input": "SELECT INPUT:",
+    "txt_rated": "Rated:",
+    "txt_type": "TYPE:",
+    "txt_res": "Internal R:"
+}
