@@ -4,9 +4,6 @@ PDI Claim system
 ------------------
 CPU 1 CORE RAM 1 GB
 Linux & WINDOWS 10+
-python 3.12 
-pip install 
-pip install fastapi uvicorn python-telegram-bot pandas openpyxl gspread google-auth schedule flask fpdf reportlab pypdf Pillow xhtml2pdf Jinja2 python-multipart
 ------------------
 CMD start python 
 # 📘 คู่มือการใช้งานระบบ PDI System
