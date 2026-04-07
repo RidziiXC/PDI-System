@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือการใช้งานระบบ PDI System</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg-color: #f8fafc;
+            --sidebar-bg: #1e293b;
+            --text-main: #334155;
+            --text-light: #94a3b8;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            overflow-y: auto;
+            padding: 20px 0;
+        }
+        .sidebar h2 {
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding: 0 20px;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar ul li a {
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 12px 20px;
+            display: block;
+            border-left: 4px solid transparent;
+            transition: 0.3s;
+        }
+        .sidebar ul li a:hover {
+            background-color: #334155;
+            border-left: 4px solid var(--primary);
+            color: white;
+        }
+        
+        /* Main Content */
+        .content {
+            margin-left: 250px;
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        h1, h2, h3 {
+            color: #0f172a;
+        }
+        h1 {
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+        h2 {
+            margin-top: 0;
+            color: var(--primary);
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        code {
+            background: #e2e8f0;
+            padding: 2px 5px;
+            border-radius: 4px;
+            color: #b91c1c;
+        }
+        pre code {
+            background: transparent;
+            color: inherit;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+        }
+        table, th, td {
+            border: 1px solid #cbd5e1;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f1f5f9;
+        }
+        .badge {
+            background: #e0e7ff;
+            color: #4f46e5;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>📚 PDI System Docs</h2>
+        <ul>
+            <li><a href="#overview">1. ภาพรวมระบบ</a></li>
+            <li><a href="#install">2. การติดตั้งและตั้งค่า</a></li>
+            <li><a href="#telegram">3. Telegram Bot</a></li>
+            <li><a href="#pdi">4. PDI Web</a></li>
+            <li><a href="#inventory">5. Inventory Web</a></li>
+            <li><a href="#report">6. Report Service</a></li>
+            <li><a href="#claim">7. Claim Management</a></li>
+            <li><a href="#edc">8. EDC Battery PDF</a></li>
+            <li><a href="#workflow">9. ขั้นตอนการทำงาน</a></li>
+        </ul>
+    </div>
+
+    <div class="content">
+        <div class="card" id="overview">
+            <h1>1. ภาพรวมระบบ (System Overview)</h1>
+            <p>ระบบ PDI System เป็นระบบจัดการสต็อกรถยนต์แบบครบวงจร ประกอบด้วยโมดูลหลัก 6 ส่วน:</p>
+            <ul>
+                <li>🤖 <b>Telegram Bot</b> (main.py): นำเข้า Excel, Stock Out/In, ค้นหา VIN, รายงาน</li>
+                <li>🔧 <b>PDI Web</b> (Port 9000): คิว PDI, แจ้งซ่อม, แบตเตอรี่, VDCI Report</li>
+                <li>📦 <b>Inventory Web</b> (Port 9111): จัดการสต็อก, ย้าย Slot, ตรวจนับ</li>
+                <li>📊 <b>Report Service</b> (Port 9112): ออกรายงาน CSV/Preview พร้อมฟิลเตอร์</li>
+                <li>📋 <b>Claim Management</b> (Port 9120): จัดการ Claim, สร้าง PDFรายงาน</li>
+                <li>🔋 <b>EDC Battery PDF</b> (Port 7100): สร้าง PDF รายงานแบตเตอรี่ UT675A</li>
+            </ul>
+        </div>
+
+        <div class="card" id="install">
+            <h2>2. การติดตั้งและตั้งค่า</h2>
+            <h3>โฟลเดอร์รันงาน (สำคัญมาก)</h3>
+            <p>ทุกระบบจะอ่านและเขียนข้อมูลลงฐานข้อมูลเดียวกัน <code>stock.db</code> ดังนั้น ต้องเปิด terminal และรันคำสั่งต่างๆ จากโฟลเดอร์ที่มีไฟล์ระบบรวมกันอยู่</p>
+            
+            <h3>คำสั่งรันแบบ Manual</h3>
+            <pre><code># Telegram Bot
+python main.py
+
+# PDI Web
+python pdi_web.py
+
+# Inventory Web
+uvicorn inventory_web:app --host 0.0.0.0 --port 9111</code></pre>
+            <p><i>*สามารถใช้ไฟล์ `start_system.bat` รันทุกระบบพร้อมกันได้เลย</i></p>
+        </div>
+
+        <div class="card" id="telegram">
+            <h2>3. Telegram Bot — คำสั่งทั้งหมด</h2>
+            <table>
+                <tr><th>คำสั่ง</th><th>การทำงาน</th></tr>
+                <tr><td><code>/start</code></td><td>ดูคำสั่งทั้งหมด</td></tr>
+                <tr><td>ส่งไฟล์ <code>.xlsx</code></td><td>อัปเดตข้อมูลรถเข้าสต็อก (ข้อมูลจาก Excel)</td></tr>
+                <tr><td>ส่งไฟล์มีคำว่า <code>stockout</code></td><td>อัปเดต Stock Out พร้อมประทับเวลา</td></tr>
+                <tr><td><code>/s &lt;VIN&gt;</code></td><td>ค้นหา VIN จากข้อความเลขท้าย 4-5 หลัก</td></tr>
+                <tr><td><code>/out &lt;VIN&gt;</code></td><td>ทำ Stock Out (ถ้ารถติดล็อค PDI/Damages ทำไม่ได้)</td></tr>
+                <tr><td><code>/rein &lt;VIN&gt;</code></td><td>Stock In รอบที่ 2 (รถที่เคยออกไปแล้ว)</td></tr>
+                <tr><td><code>/inv</code></td><td>ดึง Excel สรุปสต็อกคงเหลือ</td></tr>
+                <tr><td><code>/otoday</code></td><td>รายงานรถที่ออกไปในวันนี้</td></tr>
+                <tr><td><code>/PDMO &lt;VIN&gt;</code></td><td>ส่งเข้าคิว PDI (ล็อครถ)</td></tr>
+                <tr><td><code>/PDMI &lt;VIN&gt; &lt;Slot&gt;</code></td><td>ปลดล็อค PDI รถและระบุ Slot ใหม่ (PDI ต้อง 100%)</td></tr>
+                <tr><td><code>/EXPCF &lt;VIN&gt;</code></td><td>ยืนยัน Export ชิปเมนต์</td></tr>
+            </table>
+        </div>
+
+        <div class="card" id="pdi">
+            <h2>4. PDI Web — Port 9000</h2>
+            <p>หน้าจัดการคิวและรายละเอียด PDI <code>http://localhost:9000</code></p>
+            <ul>
+                <li><b>PDI Queue:</b> อัปเดตแบบเรียลไทม์ กดเปิด Job เพื่อกดยืนยัน FILL, VDCI, BODY</li>
+                <li><b>งานแจ้งซ่อม:</b> สร้างงานแจ้งซ่อมใหม่ (จะล็อครถ) → เมื่อแก้เสร็จกด OK รถจะปลดล็อค</li>
+                <li><b>VDCI Report:</b> อัปโหลดไฟล์ .html ก่อนและหลังแก้ เพื่อให้ระบบประเมินผลและปลดล็อคให้อัตโนมัติ</li>
+                <li><b>Batch Upload:</b> ใส่โฟลเดอร์ VDCI ให้ระบบไล่ Process ทุกไฟล์ทีเดียว</li>
+            </ul>
+        </div>
+
+        <div class="card" id="inventory">
+            <h2>5. Inventory Web — Port 9111</h2>
+            <p>หน้าจัดการคลังรถยนต์และ Stock <code>http://localhost:9111</code></p>
+            <ul>
+                <li><b>ค้นหา:</b> พิมพ์อักษรบางส่วนแล้วเลือกรถ แสดงรายละเอียดทั้งหมด (Slot, Lock, Status, Battery)</li>
+                <li><b>จัดการ Slot:</b> เปลี่ยนตำแหน่งจอดได้ทันทีในหน้ารายละเอียด</li>
+                <li><b>ตรวจนับสต็อก:</b> เปิด Job ขึ้นมา แล้วใช้เครื่องแสกน แสกน VIN ทีละคันลงระบบเพื่อนำเข้า Stock แบบแม่นยำ</li>
+            </ul>
+        </div>
+
+        <div class="card" id="report">
+            <h2>6. Report Service — Port 9112</h2>
+            <p>ระบบสร้างรายงานและส่งออกข้อมูลออกไปใช้งาน <code>http://localhost:9112</code></p>
+            <ul>
+                <li>ใช้ฟิลเตอร์ทั้ง 8 ช่อง เช่น ค้นหารถที่ยังไม่ PDI, รถที่มี/ไม่มี Slot หรือกรองตามสถานที่จะส่งออก</li>
+                <li>รองรับการดู Preview บนหน้าจอทันที หรือ Export ออกเป็น CSV</li>
+            </ul>
+        </div>
+
+        <div class="card" id="claim">
+            <h2>7. Claim Management — Port 9120</h2>
+            <p>ระบบจัดการแบตชำรุดหรือขอเอกสาร Claim รถ <code>http://localhost:9120</code></p>
+            <ul>
+                <li>ระบุผล Battery CCA, SOC, SOH พร้อมอัปโหลดรูปแบตเตอร์รี่</li>
+                <li>สร้าง PDF ออกมาเป็นการรวมร่างระหว่าง Template บริษัท (เช่น รุ่น YP / ES), ค่าต่างๆ และภาพถ่าย ออกเป็น 1 ไฟล์สมบูรณ์</li>
+            </ul>
+        </div>
+
+        <div class="card" id="edc">
+            <h2>8. EDC Battery PDF — Port 7100</h2>
+            <p>ระบบ Print PDF รายงานแบตเตอรี่หน้าตาเรียบง่าย <code>http://localhost:7100</code></p>
+            <ul>
+                <li>มีทั้งตัวเลือก <b>Single</b> และรูปแบบ <b>Batch Upload</b> สำหรับแสกนและออก PDF พร้อมกันหลายคันจาก Excel (ดึงค่า Dummy สุ่มที่มีความสมจริง)</li>
+            </ul>
+        </div>
+        
+        <div class="card" id="workflow">
+            <h2>9. Workflow และการใช้งานทั่วไป (Workflow)</h2>
+            <ol>
+                <li><b>เริ่มต้นรับรถ:</b> โยนไฟล์ Excel ของบริษัทเข้าแชท Bot จากนั้นลากรถไปจอดแสกน PDI</li>
+                <li><b>ตรวจรับรถ:</b> เข้า PDI Web สร้าง Job ทำตามขั้นตอน หรือ Upload VDCI → รถผ่านการ PDI จบ</li>
+                <li><b>ตรวจนับ/Stock:</b> เข้า Inventory Web ใช้เมนูแสกนนับรถเช็ค Slot ให้ถูกต้อง</li>
+                <li><b>ปล่อยรถออก (Out):</b> พิมพ์ <code>/out VIN</code> ใน Bot ถ้ายืนยันแล้วข้อมูลจะเข้า report</li>
+            </ol>
+            <p>หากมีรถที่ต้องซ่อม ก็สร้างงานจากหน้า "งานแจ้งซ่อม" รถคันนั้นจะทำการ Out ไม่ได้จนกว่าจะกด OK.</p>
+        </div>
+    </div>
+</body>
+</html>
